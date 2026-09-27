@@ -93,6 +93,9 @@ class YoloDetector(
 
     fun detect(bitmap: Bitmap): List<Detection> {
 
+        val startTime =
+            System.currentTimeMillis()
+
         // 1. Mantém a proporção da imagem
         val letterboxResult =
             letterbox(bitmap)
@@ -204,6 +207,15 @@ class YoloDetector(
                 )
             )
         }
+
+        val elapsed =
+            System.currentTimeMillis() -
+                    startTime
+
+        android.util.Log.d(
+            "YOLO",
+            "Tempo: ${elapsed}ms | FPS: ${1000f / elapsed}"
+        )
 
         return nms(detections)
 

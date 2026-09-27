@@ -1,7 +1,5 @@
 package io.github.fabiocintra.fivelas_counter.ui
 
-import io.github.fabiocintra.fivelas_counter.detection.Detection
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,12 +9,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 
+import io.github.fabiocintra.fivelas_counter.tracking.TrackedObject
+
 
 @Composable
 fun DetectionOverlay(
-    detections: List<Detection>,
+    tracks: List<TrackedObject>,
     frameWidth: Int,
     frameHeight: Int,
+
+    // posição da linha entre 0 e 1
+    lineY: Float = 0.60f,
+
     modifier: Modifier = Modifier
 ) {
 
@@ -24,9 +28,18 @@ fun DetectionOverlay(
         modifier = modifier
     ) {
 
-        if (frameWidth == 0 || frameHeight == 0) {
+        if (
+            frameWidth == 0 ||
+            frameHeight == 0
+        ) {
             return@Canvas
         }
+
+
+        // ==============================
+        // TAMANHO REAL DA IMAGEM
+        // DENTRO DO PREVIEW
+        // ==============================
 
         val imageAspectRatio =
             frameWidth.toFloat() /
@@ -44,9 +57,12 @@ fun DetectionOverlay(
         val offsetY: Float
 
 
-        if (canvasAspectRatio > imageAspectRatio) {
+        if (
+            canvasAspectRatio >
+            imageAspectRatio
+        ) {
 
-            // Sobra espaço nas laterais
+            // sobra espaço nas laterais
 
             displayedHeight =
                 size.height
@@ -56,15 +72,14 @@ fun DetectionOverlay(
                         imageAspectRatio
 
             offsetX =
-                (size.width - displayedWidth) / 2f
+                (size.width - displayedWidth) /
+                        2f
 
             offsetY = 0f
 
         } else {
 
-            // Sobra espaço em cima e embaixo
-            // ESTE É O QUE ESTÁ ACONTECENDO
-            // NA SUA IMAGEM.
+            // sobra espaço em cima/baixo
 
             displayedWidth =
                 size.width
@@ -76,28 +91,71 @@ fun DetectionOverlay(
             offsetX = 0f
 
             offsetY =
-                (size.height - displayedHeight) / 2f
+                (size.height - displayedHeight) /
+                        2f
         }
 
 
-        detections.forEach { detection ->
+        // ==============================
+        // LINHA DE CONTAGEM
+        // ==============================
+
+        val lineScreenY =
+            offsetY +
+                    lineY *
+                    displayedHeight
+
+        drawLine(
+            color = Color.Green,
+
+            start = Offset(
+                offsetX,
+                lineScreenY
+            ),
+
+            end = Offset(
+                offsetX + displayedWidth,
+                lineScreenY
+            ),
+
+            strokeWidth = 6f
+        )
+
+
+        // ==============================
+        // OBJETOS RASTREADOS
+        // ==============================
+
+        tracks.forEach { track ->
+
+            val detection =
+                track.detection
+
 
             val left =
                 offsetX +
-                        detection.x1 * displayedWidth
+                        detection.x1 *
+                        displayedWidth
 
             val top =
                 offsetY +
-                        detection.y1 * displayedHeight
+                        detection.y1 *
+                        displayedHeight
 
             val right =
                 offsetX +
-                        detection.x2 * displayedWidth
+                        detection.x2 *
+                        displayedWidth
 
             val bottom =
                 offsetY +
-                        detection.y2 * displayedHeight
+                        detection.y2 *
+                        displayedHeight
 
+
+            // ==============================
+            // BOUNDING BOX
+            // ==============================
 
             drawRect(
                 color = Color.Red,
@@ -117,25 +175,70 @@ fun DetectionOverlay(
                 )
             )
 
-            drawContext.canvas.nativeCanvas.drawText(
-                "Fivela ${
-                    (detection.confidence * 100).toInt()
-                }%",
 
-                left,
+            // ==============================
+            // TEXTO:
+            //
+            // ID 3 - 87%
+            // ==============================
 
-                (top - 10f)
-                    .coerceAtLeast(40f),
+            drawContext
+                .canvas
+                .nativeCanvas
+                .drawText(
 
-                android.graphics.Paint().apply {
+                    "ID ${track.id} - ${
+                        (
+                                detection.confidence *
+                                        100
+                                ).toInt()
+                    }%",
 
-                    color =
-                        android.graphics.Color.RED
+                    left,
 
-                    textSize = 40f
+                    (top - 10f)
+                        .coerceAtLeast(40f),
 
-                    isAntiAlias = true
-                }
+                    android.graphics.Paint()
+                        .apply {
+
+                            color =
+                                android.graphics.Color.RED
+
+                            textSize = 40f
+
+                            isAntiAlias = true
+                        }
+                )
+
+
+            // ==============================
+            // CENTRO DO OBJETO
+            //
+            // útil para enxergar exatamente
+            // qual ponto usamos na contagem
+            // ==============================
+
+            val centerScreenX =
+                offsetX +
+                        track.centerX *
+                        displayedWidth
+
+            val centerScreenY =
+                offsetY +
+                        track.centerY *
+                        displayedHeight
+
+
+            drawCircle(
+                color = Color.Yellow,
+
+                radius = 8f,
+
+                center = Offset(
+                    centerScreenX,
+                    centerScreenY
+                )
             )
         }
     }

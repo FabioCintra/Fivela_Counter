@@ -25,9 +25,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import io.github.fabiocintra.fivelas_counter.counting.LineCounter
+import io.github.fabiocintra.fivelas_counter.tracking.SimpleTracker
+import io.github.fabiocintra.fivelas_counter.tracking.TrackedObject
 
 import io.github.fabiocintra.fivelas_counter.ui.DetectionOverlay
 
+
+import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import io.github.fabiocintra.fivelas_counter.counting.StableCounter
 
 fun rotateBitmap(
     bitmap: Bitmap,
@@ -78,6 +93,33 @@ fun CameraPreview(
 
     val detector = remember {
         YoloDetector(context)
+    }
+
+    val tracker = remember {
+        SimpleTracker()
+    }
+
+    val lineCounter = remember {
+        LineCounter(
+            lineY = 0.60f
+        )
+    }
+
+    val stableCounter = remember {
+        StableCounter(
+            windowSize = 10,
+            minAgreement = 7
+        )
+    }
+
+    var tracks by remember {
+        mutableStateOf<List<TrackedObject>>(
+            emptyList()
+        )
+    }
+
+    var count by remember {
+        mutableIntStateOf(0)
     }
 
     var detections by remember {
@@ -150,11 +192,30 @@ fun CameraPreview(
                             val newDetections =
                                 detector.detect(rotatedBitmap)
 
+                            val newTracks =
+                                tracker.update(
+                                    newDetections
+                                )
+
+                            lineCounter.update(
+                                newTracks
+                            )
+
+                            val newCount =
+                                lineCounter.count
+
                             ContextCompat
                                 .getMainExecutor(context)
                                 .execute {
 
-                                    detections = newDetections
+                                    detections =
+                                        newDetections
+
+                                    tracks =
+                                        newTracks
+
+                                    count =
+                                        newCount
 
                                     frameWidth =
                                         rotatedBitmap.width
@@ -203,10 +264,37 @@ fun CameraPreview(
         // =====================================
 
         DetectionOverlay(
-            detections = detections,
+            tracks = tracks,
             frameWidth = frameWidth,
             frameHeight = frameHeight,
+            lineY = lineCounter.lineY,
             modifier = Modifier.fillMaxSize()
         )
+
+        Text(
+            text = "Contagem: $count",
+            color = Color.White,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(24.dp)
+                .background(
+                    Color.Black.copy(alpha = 0.6f)
+                )
+                .padding(12.dp)
+        )
+
+        Button(
+            onClick = {
+                lineCounter.reset()
+                count = 0
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(24.dp)
+        ) {
+            Text("Zerar")
+        }
     }
 }
